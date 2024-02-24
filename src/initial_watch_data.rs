@@ -504,7 +504,7 @@ pub struct Series {
 #[serde(rename_all = "camelCase")]
 pub struct Video4 {
     pub prev: Prev,
-    pub next: Next,
+    pub next: Option<Next>,
     pub first: First,
 }
 
