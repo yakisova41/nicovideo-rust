@@ -6,6 +6,7 @@ pub mod nicovideo_rust {
 
     #[allow(dead_code)]
     #[derive(Clone)]
+    #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct NicoSession {
         pub session: SessionResponse,
         pub initial_watch_data: InitialWatchData
