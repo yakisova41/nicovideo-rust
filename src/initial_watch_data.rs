@@ -222,7 +222,7 @@ pub struct Marquee {
 #[serde(rename_all = "camelCase")]
 pub struct Media {
     pub domand: Domand,
-    pub delivery: Delivery,
+    pub delivery: Option<Delivery>,
     pub delivery_legacy: Value,
 }
 
