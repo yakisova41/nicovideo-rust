@@ -106,82 +106,89 @@ pub struct HeartBeat {
 pub fn payload_generator(initial_watch_data: &InitialWatchData) -> SessionPayload {
     let copy = initial_watch_data.clone();
 
-    let protocol = SessionPayloadProtocol {
-        name: "http".to_owned(),
-        parameters: Parameters {
-            http_parameters : HttpParameters {
-                parameters : ParametersHttpParametersParameters {
-                    hls_parameters : HlsParameters {
-                        use_well_known_port: "yes".to_owned(),
-                        use_ssl: "yes".to_owned(),
-                        transfer_preset: "".to_owned(),
-                        segment_duration: 6000
+    match copy.media.delivery {
+        Some(delivery) => {
+            let protocol = SessionPayloadProtocol {
+                name: "http".to_owned(),
+                parameters: Parameters {
+                    http_parameters : HttpParameters {
+                        parameters : ParametersHttpParametersParameters {
+                            hls_parameters : HlsParameters {
+                                use_well_known_port: "yes".to_owned(),
+                                use_ssl: "yes".to_owned(),
+                                transfer_preset: "".to_owned(),
+                                segment_duration: 6000
+                            }
+                        }
                     }
                 }
-            }
-        }
-    };
-
-    let session_operation_auth = SessionOperationAuth {
-        session_operation_auth_by_signature: SessionOperationAuthBySignature {
-            token:copy.media.delivery.movie.session.token,
-            signature:copy.media.delivery.movie.session.signature
-        },
-    };
-
-    let mut audio_src_ids:Vec<String> = Vec::new();
-    for audio in copy.media.delivery.movie.audios {
-        if audio.is_available {
-            audio_src_ids.push(audio.id);
-        }
-    };
-
-    let mut video_src_ids:Vec<String> = Vec::new();
-    for video in copy.media.delivery.movie.videos {
-        if video.is_available {
-            video_src_ids.push(video.id);
-        }
-    };
-
-
-    let mut content_src_ids: Vec<ContentSrcId> = Vec::new();
-    content_src_ids.push(ContentSrcId {
-        src_id_to_mux: SrcIdToMux {
-            audio_src_ids,
-            video_src_ids,
-        }
-    });
-
-    let mut content_src_id_sets:Vec<ContentSrcIdSet> = Vec::new();
-    content_src_id_sets.push(ContentSrcIdSet {
-        content_src_ids
-    });
-
-    SessionPayload {
-        session: SessionPayloadSession {
-            recipe_id: format!("nicovideo-{}", copy.video.id),
-            content_id: "out1".to_owned(),
-            content_type: "movie".to_owned(),
-            timing_constraint: "unlimited".to_owned(),
-            priority: 0,
-            protocol,            
-            session_operation_auth,
-            content_auth: ContentAuth {
-                auth_type: "ht2".to_owned(),
-                content_key_timeout: 600000,
-                service_id: "nicovideo".to_owned(),
-                service_user_id: copy.media.delivery.movie.session.service_user_id,
-            },
-            content_uri: "".to_owned(),
-            keep_method: KeepMethod {
-                heartbeat: HeartBeat {
-                    lifetime: 120000
+            };
+        
+            let session_operation_auth = SessionOperationAuth {
+                session_operation_auth_by_signature: SessionOperationAuthBySignature {
+                    token:delivery.movie.session.token,
+                    signature:delivery.movie.session.signature
+                },
+            };
+        
+            let mut audio_src_ids:Vec<String> = Vec::new();
+            for audio in delivery.movie.audios {
+                if audio.is_available {
+                    audio_src_ids.push(audio.id);
                 }
-            },
-            client_info: ClientInfo {
-                player_id: copy.media.delivery.movie.session.player_id
-            },
-            content_src_id_sets,
-        }
+            };
+        
+            let mut video_src_ids:Vec<String> = Vec::new();
+            for video in delivery.movie.videos {
+                if video.is_available {
+                    video_src_ids.push(video.id);
+                }
+            };
+        
+        
+            let mut content_src_ids: Vec<ContentSrcId> = Vec::new();
+            content_src_ids.push(ContentSrcId {
+                src_id_to_mux: SrcIdToMux {
+                    audio_src_ids,
+                    video_src_ids,
+                }
+            });
+        
+            let mut content_src_id_sets:Vec<ContentSrcIdSet> = Vec::new();
+            content_src_id_sets.push(ContentSrcIdSet {
+                content_src_ids
+            });
+        
+            SessionPayload {
+                session: SessionPayloadSession {
+                    recipe_id: format!("nicovideo-{}", copy.video.id),
+                    content_id: "out1".to_owned(),
+                    content_type: "movie".to_owned(),
+                    timing_constraint: "unlimited".to_owned(),
+                    priority: 0,
+                    protocol,            
+                    session_operation_auth,
+                    content_auth: ContentAuth {
+                        auth_type: "ht2".to_owned(),
+                        content_key_timeout: 600000,
+                        service_id: "nicovideo".to_owned(),
+                        service_user_id: delivery.movie.session.service_user_id,
+                    },
+                    content_uri: "".to_owned(),
+                    keep_method: KeepMethod {
+                        heartbeat: HeartBeat {
+                            lifetime: 120000
+                        }
+                    },
+                    client_info: ClientInfo {
+                        player_id: delivery.movie.session.player_id
+                    },
+                    content_src_id_sets,
+                }
+            }
+        },
+        None => {
+            panic!("")
+        },
     }
 }
