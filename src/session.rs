@@ -1,13 +1,22 @@
 use crate::initial_watch_data::InitialWatchData;
-use reqwest::{self, header::{self, ACCEPT, CONTENT_TYPE}};
+use reqwest::{self};
 use serde_json::Value;
 mod session_payload;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use crate::header;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionResponse {
+    pub meta: Meta,
+    pub data: Data,
+    pub headers: header::ParsedHeaderMap
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionFetchResponse {
     pub meta: Meta,
     pub data: Data,
 }
@@ -248,9 +257,9 @@ pub struct ClientInfo {
 pub async fn get_session(initial_watch_data: &InitialWatchData) -> Result<SessionResponse, &str> {
     let client = reqwest::Client::new();
 
-    let mut headers = header::HeaderMap::new();
-    headers.append(ACCEPT, header::HeaderValue::from_static("application/json"));
-    headers.append(CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.append(reqwest::header::ACCEPT, reqwest::header::HeaderValue::from_static("application/json"));
+    headers.append(reqwest::header::CONTENT_TYPE, reqwest::header::HeaderValue::from_static("application/json"));
 
     let payload_data = session_payload::payload_generator(initial_watch_data);
     let payload = serde_json::to_string(&payload_data).unwrap();
@@ -261,9 +270,15 @@ pub async fn get_session(initial_watch_data: &InitialWatchData) -> Result<Sessio
         .send()
         .await  {
         Ok(res) => {
+            let headers = res.headers();
+            let parsed_headers = header::parse_headers(headers);
             let text = res.text().await.unwrap();
-            let session: SessionResponse = serde_json::from_str(&text).unwrap();
-            Ok(session)
+            let session: SessionFetchResponse = serde_json::from_str(&text).unwrap();
+            Ok(SessionResponse {
+                data: session.data,
+                meta: session.meta,
+                headers: parsed_headers
+            })
         },
         Err(_) => Err("")
     }
