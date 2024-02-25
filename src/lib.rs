@@ -19,7 +19,7 @@ pub mod nicovideo_rust {
 
     #[allow(dead_code)]
     #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-    pub struct NicoHlsSession {
+    pub struct NicoDomandSession {
         pub session: DomandResponse,
         pub initial_watch_data: InitialWatchData
     }
@@ -58,11 +58,11 @@ pub mod nicovideo_rust {
      * セッションとinitial_watch_dataを取得します。
      * ニコニコ動画2023年新配信サーバー"domand"用
      */
-    pub async fn create_new_domand_session(video_id: &str) ->  Result<NicoHlsSession, &str> {
+    pub async fn create_new_domand_session(video_id: &str) ->  Result<NicoDomandSession, &str> {
         let initial_watch_data = initial_watch_data::get_initial_watch_data(video_id).await.unwrap();
 
         let session = domand::get_domand_session(&initial_watch_data).await.unwrap();
-        Ok(NicoHlsSession {
+        Ok(NicoDomandSession {
             initial_watch_data,
             session
         })
