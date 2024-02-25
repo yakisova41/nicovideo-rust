@@ -3,10 +3,18 @@ use scraper::{Html, Selector};
 use serde_json::Value;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use crate::header;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InitialWatchData {
+    pub data: InitialWatchDataResponse,
+    pub headers: header::ParsedHeaderMap
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InitialWatchDataResponse {
     pub ads: Value,
     pub category: Value,
     pub channel: Value,
@@ -859,7 +867,7 @@ pub struct Waku {
 
 
 
-fn parse_initial_watch_data(text : &str) -> Result<InitialWatchData, std::string::String>  {
+fn parse_initial_watch_data(text : &str) -> Result<InitialWatchDataResponse, std::string::String>  {
     let document = Html::parse_document(&text);
     let selector = Selector::parse("#js-initial-watch-data").unwrap();
 
@@ -868,7 +876,7 @@ fn parse_initial_watch_data(text : &str) -> Result<InitialWatchData, std::string
 
     match elem.attr("data-api-data") {
         Some(apidata_text) => {
-            let apidata: InitialWatchData = serde_json::from_str(&apidata_text).unwrap();
+            let apidata: InitialWatchDataResponse = serde_json::from_str(&apidata_text).unwrap();
             Ok(apidata)
         },
         None => {
@@ -880,9 +888,14 @@ fn parse_initial_watch_data(text : &str) -> Result<InitialWatchData, std::string
 pub async fn get_initial_watch_data(video_id: &str) -> Result<InitialWatchData, String> {
     match reqwest::get(format!("https://www.nicovideo.jp/watch/{}", video_id)).await {
         Ok(res) => {
+            let headers = res.headers();
+            let parsed_headers = header::parse_headers(&headers);
             let text = res.text().await.unwrap();
             let parsed = parse_initial_watch_data(&text).unwrap();
-            Ok(parsed)
+            Ok(InitialWatchData {
+                headers: parsed_headers,
+                data: parsed
+            })
         },
         Err(_e) => Err("e".to_string())
     }

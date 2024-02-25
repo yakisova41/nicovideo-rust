@@ -106,7 +106,7 @@ pub struct HeartBeat {
 pub fn payload_generator(initial_watch_data: &InitialWatchData) -> SessionPayload {
     let copy = initial_watch_data.clone();
 
-    match copy.media.delivery {
+    match copy.data.media.delivery {
         Some(delivery) => {
             let protocol = SessionPayloadProtocol {
                 name: "http".to_owned(),
@@ -161,7 +161,7 @@ pub fn payload_generator(initial_watch_data: &InitialWatchData) -> SessionPayloa
         
             SessionPayload {
                 session: SessionPayloadSession {
-                    recipe_id: format!("nicovideo-{}", copy.video.id),
+                    recipe_id: format!("nicovideo-{}", copy.data.video.id),
                     content_id: "out1".to_owned(),
                     content_type: "movie".to_owned(),
                     timing_constraint: "unlimited".to_owned(),

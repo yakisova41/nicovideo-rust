@@ -1,14 +1,23 @@
 use crate::initial_watch_data::InitialWatchData;
 use reqwest;
-use reqwest::header;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use crate::header;
+
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HlsResponse {
+pub struct DomandResponse {
     pub meta: Meta,
-    pub data: Data
+    pub data: Data,
+    pub headers: header::ParsedHeaderMap
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomandFetchResponse {
+    pub meta: Meta,
+    pub data: Data,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -27,11 +36,11 @@ pub struct Data {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HlsPayload {
+pub struct DomandPayload {
     pub outputs: Vec<Vec<String>>
 }
 
-pub async fn get_hls(initial_watch_data: &InitialWatchData) -> Result<HlsResponse, &str> {
+pub async fn get_domand_session(initial_watch_data: &InitialWatchData) -> Result<DomandResponse, &str> {
     let client = reqwest::Client::new();
 
     let mut outputs: Vec<Vec<String>> = Vec::new();
@@ -40,7 +49,7 @@ pub async fn get_hls(initial_watch_data: &InitialWatchData) -> Result<HlsRespons
     let copy = initial_watch_data.clone();
 
     let mut video_src_ids:Vec<String> = Vec::new();
-    for video in copy.media.domand.videos {
+    for video in copy.data.media.domand.videos {
         if video.is_available {
             video_src_ids.push(video.id);
         }
@@ -48,7 +57,7 @@ pub async fn get_hls(initial_watch_data: &InitialWatchData) -> Result<HlsRespons
     outputs_inner.push(video_src_ids.last().unwrap().to_string());
 
     let mut audio_src_ids:Vec<String> = Vec::new();
-    for audio in copy.media.domand.audios {
+    for audio in copy.data.media.domand.audios {
         if audio.is_available {
             audio_src_ids.push(audio.id);
         }
@@ -57,23 +66,23 @@ pub async fn get_hls(initial_watch_data: &InitialWatchData) -> Result<HlsRespons
 
     outputs.push(outputs_inner);
 
-    let payload_data = HlsPayload {
+    let payload_data = DomandPayload {
         outputs
     };
     let payload = serde_json::to_string(&payload_data).unwrap();
 
-    let mut headers = header::HeaderMap::new();
-    headers.insert("x-access-right-key", header::HeaderValue::from_str(&initial_watch_data.media.domand.access_right_key).unwrap());
-    headers.insert("x-frontend-id", header::HeaderValue::from_str( "6").unwrap());
-    headers.insert("x-frontend-version", header::HeaderValue::from_str("0").unwrap());
-    headers.insert("x-request-with", header::HeaderValue::from_str("https://www.nicovideo.jp").unwrap());
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("x-access-right-key", reqwest::header::HeaderValue::from_str(&initial_watch_data.data.media.domand.access_right_key).unwrap());
+    headers.insert("x-frontend-id", reqwest::header::HeaderValue::from_str( "6").unwrap());
+    headers.insert("x-frontend-version", reqwest::header::HeaderValue::from_str("0").unwrap());
+    headers.insert("x-request-with", reqwest::header::HeaderValue::from_str("https://www.nicovideo.jp").unwrap());
 
 
     match client
         .post(
         format!("https://nvapi.nicovideo.jp/v1/watch/{}/access-rights/hls?actionTrackId={}",
-                initial_watch_data.video.id,
-                initial_watch_data.client.watch_track_id
+                initial_watch_data.data.video.id,
+                initial_watch_data.data.client.watch_track_id
             )
         )
         .body(payload)
@@ -81,9 +90,17 @@ pub async fn get_hls(initial_watch_data: &InitialWatchData) -> Result<HlsRespons
         .send()
         .await {
         Ok(res) => {
+            let headers = res.headers();
+            let parsed_headers = header::parse_headers(headers);
             let text = res.text().await.unwrap();
-            let data:HlsResponse = serde_json::from_str(&text).unwrap();
-            Ok(data)
+
+            let json: DomandFetchResponse = serde_json::from_str(&text).unwrap();
+            
+            Ok(DomandResponse {
+                meta: json.meta,
+                data: json.data,
+                headers: parsed_headers,
+            })
         },
         Err(_) => Err("")
     }
