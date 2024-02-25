@@ -71,11 +71,16 @@ pub async fn get_domand_session(initial_watch_data: &InitialWatchData) -> Result
     };
     let payload = serde_json::to_string(&payload_data).unwrap();
 
+    let raw_cookie = initial_watch_data.headers.get("set-cookie").unwrap();
+    let split = raw_cookie.split(";").collect::<Vec<_>>();
+    let cookie = format!("{}{}", split.get(0).unwrap(), ";");
+
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("x-access-right-key", reqwest::header::HeaderValue::from_str(&initial_watch_data.data.media.domand.access_right_key).unwrap());
     headers.insert("x-frontend-id", reqwest::header::HeaderValue::from_str( "6").unwrap());
     headers.insert("x-frontend-version", reqwest::header::HeaderValue::from_str("0").unwrap());
     headers.insert("x-request-with", reqwest::header::HeaderValue::from_str("https://www.nicovideo.jp").unwrap());
+    headers.insert("cookie", reqwest::header::HeaderValue::from_str(&cookie).unwrap());
 
 
     match client
