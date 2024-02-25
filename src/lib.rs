@@ -4,6 +4,7 @@ mod domand;
 mod header;
 
 pub mod nicovideo_rust {
+    use reqwest::Response;
     use serde_derive::Deserialize;
     use serde_derive::Serialize;
     use crate::domand;
@@ -66,5 +67,33 @@ pub mod nicovideo_rust {
             initial_watch_data,
             session
         })
+    }
+
+    /**
+     * domand
+     * HLSにアクセスする際のreqwestへのクッキー付与を代わりにするラッパー
+     */
+    pub async fn fetch_by_domand_session(session: NicoDomandSession, url: String) -> Response {
+        let client = reqwest::Client::new();
+
+        let i_raw_cookie = session.initial_watch_data.headers.get("set-cookie").unwrap();
+        let i_split = i_raw_cookie.split(";").collect::<Vec<_>>();
+        let i_cookie = format!("{}{}", i_split.get(0).unwrap(), ";");
+
+        let s_raw_cookie = session.session.headers.get("set-cookie").unwrap();
+        let s_split = s_raw_cookie.split(";").collect::<Vec<_>>();
+        let s_cookie = format!("{}{}", s_split.get(0).unwrap(), ";");
+
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("cookie", reqwest::header::HeaderValue::from_str(&format!("{}{}", &i_cookie, &s_cookie)).unwrap());
+
+        let res = client
+        .get(url)
+        .headers(headers)
+        .send()
+        .await
+        .unwrap();
+
+        res
     }
 }
